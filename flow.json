@@ -13,7 +13,12 @@
 		}
 	},
 	"contracts": {
-		"CollectiveApprovalMechanism": "./contracts/CollectiveApprovalMechanism.cdc"
+		"CollectiveApprovalMechanism": {
+			"source": "./contracts/CollectiveApprovalMechanism.cdc",
+			"aliases": {
+				"testing": "0x0000000000000007"
+			}
+		}
 	},
 	"deployments": {
 		"emulator": {
