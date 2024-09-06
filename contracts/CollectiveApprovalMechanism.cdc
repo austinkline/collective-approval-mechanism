@@ -9,10 +9,18 @@ access(all) contract CollectiveApprovalMechanism {
     access(all) let ManagerStoragePath: StoragePath
     access(all) let VoterStoragePath: StoragePath
 
+    // Universal events, these are executed in the lifecycle of a Manager/Proposal/Vote regardless of the executable
     access(all) event ManagerCreated(managerAddress: Address, uuid: UInt64, voters: {Address: UFix64})
     access(all) event ProposalAdded(uuid: UInt64, title: String, description: String, executableType: String)
     access(all) event VoteCast(managerAddress: Address, proposalId: UInt64, voterAddress: Address, weight: UFix64, approved: Bool)
     access(all) event ProposalRun(managerAddress: Address, proposalId: UInt64, approvals: {Address: UFix64}, rejections: {Address: UFix64}, title: String, description: String)
+
+    // Executable-specific events. These are related to the built-in definitions of Executables that are needed to bootstrap
+    // newly made managers
+    access(all) event ChangeApprovedTypeExecutableCreated(uuid: UInt64, executableType: String, approved: Bool)
+    access(all) event ChangeApprovedTypeExecutableRun(uuid: UInt64, executableType: String, approved: Bool)
+    access(all) event ChangeVotersExecutableCreated(uuid: UInt64, voters: {Address: UFix64})
+    access(all) event ChangeVotersExecutableRun(uuid: UInt64, voters: {Address: UFix64})
 
     // The building block of arbitrary code execution. If enough votes are cast in favor of
     // a proposal, then its executable is able to be run. When run, an executable will get
@@ -35,6 +43,8 @@ access(all) contract CollectiveApprovalMechanism {
             let manager = acct.storage.borrow<&Manager>(from: CollectiveApprovalMechanism.ManagerStoragePath)
                 ?? panic("failed to borrow manager")
             manager.setExecutableTypeApproval(type: self.executableType, approved: self.approved)
+
+            emit ChangeApprovedTypeExecutableRun(uuid: self.uuid, executableType: self.executableType.identifier, approved: self.approved)
         }
 
         access(all) view fun describe(): AnyStruct {
@@ -47,6 +57,8 @@ access(all) contract CollectiveApprovalMechanism {
         init(executableType: Type, approved: Bool) {
             self.executableType = executableType
             self.approved = approved
+
+            emit ChangeApprovedTypeExecutableCreated(uuid: self.uuid, executableType: self.executableType.identifier, approved: self.approved)
         }
     }
 
@@ -60,6 +72,8 @@ access(all) contract CollectiveApprovalMechanism {
                 ?? panic("failed to borrow manager")
 
             manager.updateVoters(voters: self.voters)
+
+            emit ChangeVotersExecutableRun(uuid: self.uuid, voters: self.voters)
         }
 
         access(all) view fun describe(): AnyStruct {
@@ -70,6 +84,8 @@ access(all) contract CollectiveApprovalMechanism {
 
         init(voters: {Address: UFix64}) {
             self.voters = voters
+
+            emit ChangeVotersExecutableCreated(uuid: self.uuid, voters: self.voters)
         }
     }
 
