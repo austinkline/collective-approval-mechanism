@@ -1,9 +1,9 @@
-import "CollectiveApprovalMechanism"
+import "ManagedAccount"
 
 access(all) contract ContractUpdateExecutable {
     // Defines an executable that can be used to propose changes to an account's deployed contracts.
     // Mutations are executed in order, and must explicitly flag whether it is an update or not.
-    access(all) resource Executable: CollectiveApprovalMechanism.Executable {
+    access(all) resource Executable: ManagedAccount.Executable {
         access(all) let mutations: [ContractMutation]
 
         access(contract) fun run(acct: auth(Storage, Contracts, Keys, Inbox, Capabilities) &Account) {

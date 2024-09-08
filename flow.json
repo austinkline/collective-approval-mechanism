@@ -13,8 +13,8 @@
 		}
 	},
 	"contracts": {
-		"CollectiveApprovalMechanism": {
-			"source": "./contracts/CollectiveApprovalMechanism.cdc",
+		"ManagedAccount": {
+			"source": "./contracts/ManagedAccount.cdc",
 			"aliases": {
 				"testing": "0x0000000000000007"
 			}
@@ -29,7 +29,7 @@
 	"deployments": {
 		"emulator": {
 			"emulator-account": [
-				"CollectiveApprovalMechanism",
+				"ManagedAccount",
 				"ContractUpdateExecutable"
 			]
 		}

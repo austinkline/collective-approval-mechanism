@@ -1,23 +1,23 @@
-import "CollectiveApprovalMechanism"
+import "ManagedAccount"
 
 transaction(managerAddress: Address, voters: {Address: UFix64}) {
-    let voter: auth(CollectiveApprovalMechanism.Propose) &CollectiveApprovalMechanism.Voter
+    let voter: auth(ManagedAccount.Propose) &ManagedAccount.Voter
 
     prepare(acct: auth(Storage) &Account) {
-        if acct.storage.type(at: CollectiveApprovalMechanism.VoterStoragePath) == nil {
-            let voter <- CollectiveApprovalMechanism.createVoter()
-            acct.storage.save(<-voter, to: CollectiveApprovalMechanism.VoterStoragePath)
+        if acct.storage.type(at: ManagedAccount.VoterStoragePath) == nil {
+            let voter <- ManagedAccount.createVoter()
+            acct.storage.save(<-voter, to: ManagedAccount.VoterStoragePath)
         }
 
-        self.voter = acct.storage.borrow<auth(CollectiveApprovalMechanism.Propose) &CollectiveApprovalMechanism.Voter>(from: CollectiveApprovalMechanism.VoterStoragePath)
+        self.voter = acct.storage.borrow<auth(ManagedAccount.Propose) &ManagedAccount.Voter>(from: ManagedAccount.VoterStoragePath)
             ?? panic("voter not found in storage path")
     }
 
     execute {
-        let cap = getAccount(managerAddress).capabilities.get<&CollectiveApprovalMechanism.Manager>(CollectiveApprovalMechanism.ManagerPublicPath)
+        let cap = getAccount(managerAddress).capabilities.get<&ManagedAccount.Manager>(ManagedAccount.ManagerPublicPath)
         let manager = cap.borrow() ?? panic("manager not found")
 
-        let executable <- CollectiveApprovalMechanism.createChangeVotersExecutable(voters: voters)
+        let executable <- ManagedAccount.createChangeVotersExecutable(voters: voters)
 
         let title = "Update approved Voters"
         let description = "Merges the current set of voters on this manager with a new one. Any voter with an entry of 0.0 will be removed if it is already present"

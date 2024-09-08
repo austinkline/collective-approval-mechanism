@@ -1,7 +1,7 @@
-import "CollectiveApprovalMechanism"
+import "ManagedAccount"
 
 access(all) fun main(managerAddress: Address): [String] {
-    let manager = getAccount(managerAddress).capabilities.get<&CollectiveApprovalMechanism.Manager>(CollectiveApprovalMechanism.ManagerPublicPath)
+    let manager = getAccount(managerAddress).capabilities.get<&ManagedAccount.Manager>(ManagedAccount.ManagerPublicPath)
         .borrow() ?? panic("manager not found")
     let approvedTypes: [String] = []
 

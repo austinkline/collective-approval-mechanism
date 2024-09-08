@@ -1,6 +1,6 @@
-// CollectiveApprovalMechanism (aka CAM) is a contract to bring multi-sig management
+// ManagedAccount (aka CAM) is a contract to bring multi-sig management
 // and execution of work on-chain instead of using flow's built-in key-based approach
-access(all) contract CollectiveApprovalMechanism {
+access(all) contract ManagedAccount {
     // Allows participating in a vote, if a Voter resource owner is marked as an owner
     access(all) entitlement Vote
     // Allows proposing a new executable to a manager from a Voter resource
@@ -41,7 +41,7 @@ access(all) contract CollectiveApprovalMechanism {
         access(all) let approved: Bool
 
         access(contract) fun run(acct: auth(Storage, Contracts, Keys, Inbox, Capabilities) &Account) {
-            let manager = acct.storage.borrow<&Manager>(from: CollectiveApprovalMechanism.ManagerStoragePath)
+            let manager = acct.storage.borrow<&Manager>(from: ManagedAccount.ManagerStoragePath)
                 ?? panic("failed to borrow manager")
             manager.setExecutableTypeApproval(type: self.executableType, approved: self.approved)
 
@@ -69,7 +69,7 @@ access(all) contract CollectiveApprovalMechanism {
         access(all) let voters: {Address: UFix64}
 
         access(contract) fun run(acct: auth(Storage, Contracts, Keys, Inbox, Capabilities) &Account) {
-            let manager = acct.storage.borrow<&Manager>(from: CollectiveApprovalMechanism.ManagerStoragePath)
+            let manager = acct.storage.borrow<&Manager>(from: ManagedAccount.ManagerStoragePath)
                 ?? panic("failed to borrow manager")
 
             manager.updateVoters(voters: self.voters)
