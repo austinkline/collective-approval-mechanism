@@ -1,6 +1,6 @@
 import Test
 import "test_helpers.cdc"
-import "CollectiveApprovalMechanism"
+import "ManagedAccount"
 import "ContractUpdateExecutable"
 
 access(all) fun setup() {
@@ -23,7 +23,7 @@ access(all) fun test_SetupManager() {
     
     txExecutor("setup_manager.cdc", [acct], [voters])
 
-    let managerEvent = Test.eventsOfType(Type<CollectiveApprovalMechanism.ManagerCreated>()).removeLast() as! CollectiveApprovalMechanism.ManagerCreated
+    let managerEvent = Test.eventsOfType(Type<ManagedAccount.ManagerCreated>()).removeLast() as! ManagedAccount.ManagerCreated
     Test.assertEqual(managerEvent.managerAddress, acct.address)
     Test.assertEqual(managerEvent.voters[voter1.address]!, 500.0)
     Test.assertEqual(managerEvent.voters[voter2.address]!, 500.0)
@@ -38,7 +38,7 @@ access(all) fun test_Manager_AddExecutableType() {
     let executableIdentifier = getContractUpdateExecutableIdentifier()
     txExecutor("proposals/add_executable_type.cdc", [voter1], [manager.address, executableIdentifier, true])
 
-    let proposal = Test.eventsOfType(Type<CollectiveApprovalMechanism.ProposalAdded>()).removeLast() as! CollectiveApprovalMechanism.ProposalAdded
+    let proposal = Test.eventsOfType(Type<ManagedAccount.ProposalAdded>()).removeLast() as! ManagedAccount.ProposalAdded
 
     Test.assertEqual(proposal.executableType, getChangeApprovedTypeExecutableIdentifier())
     Test.assertEqual(proposal.proposer, voter1.address)
@@ -53,20 +53,20 @@ access(all) fun test_Voter_VoteOnProposal() {
     let executableIdentifier = getContractUpdateExecutableIdentifier()
     txExecutor("proposals/add_executable_type.cdc", [voter1], [manager.address, executableIdentifier, true])
 
-    let proposal = Test.eventsOfType(Type<CollectiveApprovalMechanism.ProposalAdded>()).removeLast() as! CollectiveApprovalMechanism.ProposalAdded
+    let proposal = Test.eventsOfType(Type<ManagedAccount.ProposalAdded>()).removeLast() as! ManagedAccount.ProposalAdded
 
     Test.assertEqual(proposal.executableType, getChangeApprovedTypeExecutableIdentifier())
     Test.assertEqual(proposal.proposer, voter1.address)
 
     txExecutor("vote.cdc", [voter1], [manager.address, proposal.uuid, true])
-    let voter1Event = Test.eventsOfType(Type<CollectiveApprovalMechanism.VoteCast>()).removeLast() as! CollectiveApprovalMechanism.VoteCast
+    let voter1Event = Test.eventsOfType(Type<ManagedAccount.VoteCast>()).removeLast() as! ManagedAccount.VoteCast
     Test.assertEqual(voter1Event.managerAddress, manager.address)
     Test.assertEqual(voter1Event.approved, true)
     Test.assertEqual(voter1Event.proposalId, proposal.uuid)
     Test.assertEqual(voter1Event.weight, 500.0)
 
     txExecutor("vote.cdc", [voter2], [manager.address, proposal.uuid, false])
-    let voter2Event = Test.eventsOfType(Type<CollectiveApprovalMechanism.VoteCast>()).removeLast() as! CollectiveApprovalMechanism.VoteCast
+    let voter2Event = Test.eventsOfType(Type<ManagedAccount.VoteCast>()).removeLast() as! ManagedAccount.VoteCast
     Test.assertEqual(voter2Event.managerAddress, manager.address)
     Test.assertEqual(voter2Event.approved, false)
     Test.assertEqual(voter2Event.proposalId, proposal.uuid)
@@ -81,7 +81,7 @@ access(all) fun test_Manager_AddExecutableType_Run() {
 
     let executableIdentifier = getContractUpdateExecutableIdentifier()
     txExecutor("proposals/add_executable_type.cdc", [voter1], [manager.address, executableIdentifier, true])
-    let proposal = Test.eventsOfType(Type<CollectiveApprovalMechanism.ProposalAdded>()).removeLast() as! CollectiveApprovalMechanism.ProposalAdded
+    let proposal = Test.eventsOfType(Type<ManagedAccount.ProposalAdded>()).removeLast() as! ManagedAccount.ProposalAdded
 
     txExecutor("vote.cdc", [voter1], [manager.address, proposal.uuid, true])
     txExecutor("vote.cdc", [voter2], [manager.address, proposal.uuid, true])
@@ -89,7 +89,7 @@ access(all) fun test_Manager_AddExecutableType_Run() {
     let runner = Test.createAccount()
     txExecutor("run.cdc", [runner], [manager.address, proposal.uuid])
 
-    let proposalRunEvent = Test.eventsOfType(Type<CollectiveApprovalMechanism.ProposalRun>()).removeLast() as! CollectiveApprovalMechanism.ProposalRun
+    let proposalRunEvent = Test.eventsOfType(Type<ManagedAccount.ProposalRun>()).removeLast() as! ManagedAccount.ProposalRun
     Test.assertEqual(proposalRunEvent.managerAddress, manager.address)
     Test.assertEqual(proposalRunEvent.proposalId, proposal.uuid)
 
@@ -102,7 +102,7 @@ access(all) fun test_ContractUpdateExecutable_AddContract() {
     let aCode = loadCode("samples/A.cdc", "contracts")
 
     txExecutor("proposals/update_contracts.cdc", [accounts.voter1], [accounts.manager.address, ["A"], [aCode], [false]])
-    let proposal = Test.eventsOfType(Type<CollectiveApprovalMechanism.ProposalAdded>()).removeLast() as! CollectiveApprovalMechanism.ProposalAdded
+    let proposal = Test.eventsOfType(Type<ManagedAccount.ProposalAdded>()).removeLast() as! ManagedAccount.ProposalAdded
 
     txExecutor("vote.cdc", [accounts.voter1], [accounts.manager.address, proposal.uuid, true])
     txExecutor("vote.cdc", [accounts.voter2], [accounts.manager.address, proposal.uuid, true])
@@ -125,7 +125,7 @@ access(all) fun test_ContractUpdateExecutable_UpdateContract() {
 
     let aCodeUpdate = loadCode("samples/A_updated.cdc", "contracts")
     txExecutor("proposals/update_contracts.cdc", [accounts.voter1], [accounts.manager.address, ["A"], [aCodeUpdate], [true]])
-    let proposal = Test.eventsOfType(Type<CollectiveApprovalMechanism.ProposalAdded>()).removeLast() as! CollectiveApprovalMechanism.ProposalAdded
+    let proposal = Test.eventsOfType(Type<ManagedAccount.ProposalAdded>()).removeLast() as! ManagedAccount.ProposalAdded
 
     txExecutor("vote.cdc", [accounts.voter1], [accounts.manager.address, proposal.uuid, true])
     txExecutor("vote.cdc", [accounts.voter2], [accounts.manager.address, proposal.uuid, true])
@@ -149,7 +149,7 @@ access(all) fun test_ContractUpdateExecutable_Multiple() {
     let aCodeUpdate = loadCode("samples/A_updated.cdc", "contracts")
     let bCode = loadCode("samples/B.cdc", "contracts")
     txExecutor("proposals/update_contracts.cdc", [accounts.voter1], [accounts.manager.address, ["A", "B"], [aCodeUpdate, bCode], [true, false]])
-    let proposal = Test.eventsOfType(Type<CollectiveApprovalMechanism.ProposalAdded>()).removeLast() as! CollectiveApprovalMechanism.ProposalAdded
+    let proposal = Test.eventsOfType(Type<ManagedAccount.ProposalAdded>()).removeLast() as! ManagedAccount.ProposalAdded
 
     txExecutor("vote.cdc", [accounts.voter1], [accounts.manager.address, proposal.uuid, true])
     txExecutor("vote.cdc", [accounts.voter2], [accounts.manager.address, proposal.uuid, true])
@@ -206,7 +206,7 @@ access(all) fun getContractUpdateExecutableIdentifier(): String {
 }
 
 access(all) fun getChangeApprovedTypeExecutableIdentifier(): String {
-    return Type<@CollectiveApprovalMechanism.ChangeApprovedTypeExecutable>().identifier
+    return Type<@ManagedAccount.ChangeApprovedTypeExecutable>().identifier
 }
 
 access(all) fun initializeWithContractUpdateManager(): ManagerAndVoters {
@@ -219,7 +219,7 @@ access(all) fun initializeWithContractUpdateManager(): ManagerAndVoters {
     
     let executableIdentifier = getContractUpdateExecutableIdentifier()
     txExecutor("proposals/add_executable_type.cdc", [voter1], [manager.address, executableIdentifier, true])
-    let proposal = Test.eventsOfType(Type<CollectiveApprovalMechanism.ProposalAdded>()).removeLast() as! CollectiveApprovalMechanism.ProposalAdded
+    let proposal = Test.eventsOfType(Type<ManagedAccount.ProposalAdded>()).removeLast() as! ManagedAccount.ProposalAdded
 
     txExecutor("vote.cdc", [voter1], [manager.address, proposal.uuid, true])
     txExecutor("vote.cdc", [voter2], [manager.address, proposal.uuid, true])

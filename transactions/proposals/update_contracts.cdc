@@ -1,16 +1,16 @@
-import "CollectiveApprovalMechanism"
+import "ManagedAccount"
 import "ContractUpdateExecutable"
 
 transaction(managerAddress: Address, names: [String], code: [String], isUpdate: [Bool]) {
-    let voter: auth(CollectiveApprovalMechanism.Propose) &CollectiveApprovalMechanism.Voter
+    let voter: auth(ManagedAccount.Propose) &ManagedAccount.Voter
 
     prepare(acct: auth(Storage) &Account) {
-        if acct.storage.type(at: CollectiveApprovalMechanism.VoterStoragePath) == nil {
-            let voter <- CollectiveApprovalMechanism.createVoter()
-            acct.storage.save(<-voter, to: CollectiveApprovalMechanism.VoterStoragePath)
+        if acct.storage.type(at: ManagedAccount.VoterStoragePath) == nil {
+            let voter <- ManagedAccount.createVoter()
+            acct.storage.save(<-voter, to: ManagedAccount.VoterStoragePath)
         }
 
-        self.voter = acct.storage.borrow<auth(CollectiveApprovalMechanism.Propose) &CollectiveApprovalMechanism.Voter>(from: CollectiveApprovalMechanism.VoterStoragePath)
+        self.voter = acct.storage.borrow<auth(ManagedAccount.Propose) &ManagedAccount.Voter>(from: ManagedAccount.VoterStoragePath)
             ?? panic("voter not found in storage path")
     }
     
@@ -25,7 +25,7 @@ transaction(managerAddress: Address, names: [String], code: [String], isUpdate: 
         }
         
 
-        let cap = getAccount(managerAddress).capabilities.get<&CollectiveApprovalMechanism.Manager>(CollectiveApprovalMechanism.ManagerPublicPath)
+        let cap = getAccount(managerAddress).capabilities.get<&ManagedAccount.Manager>(ManagedAccount.ManagerPublicPath)
         let manager = cap.borrow() ?? panic("manager not found")
     
         let executable <- ContractUpdateExecutable.createContractUpdateExecutable(mutations: mutations)

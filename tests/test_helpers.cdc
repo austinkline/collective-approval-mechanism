@@ -16,7 +16,7 @@ access(all)let Account0xd = Address(0x000000000000000d)
 access(all)let Account0xe = Address(0x000000000000000e)
 
 access(all) fun deployAll() {
-    deploy("CollectiveApprovalMechanism", "../contracts/CollectiveApprovalMechanism.cdc", [])
+    deploy("ManagedAccount", "../contracts/ManagedAccount.cdc", [])
     deploy("ContractUpdateExecutable", "../contracts/ContractUpdateExecutable.cdc", [])
 }
 

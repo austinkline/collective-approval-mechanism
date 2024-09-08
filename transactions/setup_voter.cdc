@@ -1,10 +1,10 @@
-import "CollectiveApprovalMechanism"
+import "ManagedAccount"
 
 transaction {
     prepare(acct: auth(Storage, Capabilities) &Account) {
-        if acct.storage.type(at: CollectiveApprovalMechanism.VoterStoragePath) == nil {
-            let voter <- CollectiveApprovalMechanism.createVoter()
-            acct.storage.save(<-voter, to: CollectiveApprovalMechanism.VoterStoragePath)
+        if acct.storage.type(at: ManagedAccount.VoterStoragePath) == nil {
+            let voter <- ManagedAccount.createVoter()
+            acct.storage.save(<-voter, to: ManagedAccount.VoterStoragePath)
         }
     }
 }
