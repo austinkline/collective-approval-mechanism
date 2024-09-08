@@ -14,7 +14,7 @@ access(all) contract ManagedAccount {
     access(all) event ManagerCreated(managerAddress: Address, uuid: UInt64, voters: {Address: UFix64})
     access(all) event ProposalAdded(uuid: UInt64, proposer: Address, title: String, description: String, executableType: String)
     access(all) event VoteCast(managerAddress: Address, proposalId: UInt64, voterAddress: Address, weight: UFix64, approved: Bool)
-    access(all) event ProposalRun(managerAddress: Address, proposalId: UInt64, approvals: {Address: UFix64}, rejections: {Address: UFix64}, title: String, description: String)
+    access(all) event ProposalRun(managerAddress: Address, proposalId: UInt64, approvals: {Address: UFix64}, rejections: {Address: UFix64}, title: String, description: String, done: Bool)
 
     // Executable-specific events. These are related to the built-in definitions of Executables that are needed to bootstrap
     // newly made managers
@@ -28,7 +28,8 @@ access(all) contract ManagedAccount {
     // the fully entitled account which corresponds which the manager is in control of.
     access(all) resource interface Executable {
         // Run the executable if it is able to be run
-        access(contract) fun run(acct: auth(Storage, Contracts, Keys, Inbox, Capabilities) &Account)
+        // Returns true if the executable is done, and false if it should be run again for its next step.
+        access(contract) fun run(acct: auth(Storage, Contracts, Keys, Inbox, Capabilities) &Account): Bool
         // Returns an arbitary struct with details about this executable
         access(all) view fun describe(): AnyStruct
     }
@@ -40,12 +41,14 @@ access(all) contract ManagedAccount {
         access(all) let executableType: Type
         access(all) let approved: Bool
 
-        access(contract) fun run(acct: auth(Storage, Contracts, Keys, Inbox, Capabilities) &Account) {
+        access(contract) fun run(acct: auth(Storage, Contracts, Keys, Inbox, Capabilities) &Account): Bool {
             let manager = acct.storage.borrow<&Manager>(from: ManagedAccount.ManagerStoragePath)
                 ?? panic("failed to borrow manager")
             manager.setExecutableTypeApproval(type: self.executableType, approved: self.approved)
 
             emit ChangeApprovedTypeExecutableRun(uuid: self.uuid, executableType: self.executableType.identifier, approved: self.approved)
+
+            return true
         }
 
         access(all) view fun describe(): AnyStruct {
@@ -68,13 +71,15 @@ access(all) contract ManagedAccount {
     access(all) resource ChangeVotersExecutable: Executable {
         access(all) let voters: {Address: UFix64}
 
-        access(contract) fun run(acct: auth(Storage, Contracts, Keys, Inbox, Capabilities) &Account) {
+        access(contract) fun run(acct: auth(Storage, Contracts, Keys, Inbox, Capabilities) &Account): Bool {
             let manager = acct.storage.borrow<&Manager>(from: ManagedAccount.ManagerStoragePath)
                 ?? panic("failed to borrow manager")
 
             manager.updateVoters(voters: self.voters)
 
             emit ChangeVotersExecutableRun(uuid: self.uuid, voters: self.voters)
+
+            return true 
         }
 
         access(all) view fun describe(): AnyStruct {
@@ -123,7 +128,7 @@ access(all) contract ManagedAccount {
         access(all) let rejections: {Address: UFix64}
 
         access(all) let details: ProposalDetails
-        access(all) var hasRun: Bool
+        access(all) var done: Bool
 
         // sum the total current total approval weight for this proposal
         access(all) view fun getApprovalWeight(): UFix64 {
@@ -165,16 +170,16 @@ access(all) contract ManagedAccount {
         // Run this proposal, can only be done if:
         //  1. the proposal has not already been run
         //  2. the sum total of weights is >= 1000.0 (just like a transaction on Flow)
-        access(contract) fun run(acct: auth(Storage, Contracts, Keys, Inbox, Capabilities) &Account) {
+        access(contract) fun run(acct: auth(Storage, Contracts, Keys, Inbox, Capabilities) &Account): Bool {
             pre {
-                !self.hasRun: "proposal has already been run"
+                !self.done: "proposal is already finished"
             }
 
             let approvalWeight = self.getApprovalWeight()
             assert(approvalWeight >= 1000.0, message: "canot run, minimum approval weight not met. Need 1000.0 or greater, got: ".concat(approvalWeight.toString()))
 
-            self.executable.run(acct: acct)
-            self.hasRun = true
+            self.done = self.executable.run(acct: acct)
+            return self.done
         }
 
         init(executable: @{Executable}, details: ProposalDetails) {
@@ -182,7 +187,7 @@ access(all) contract ManagedAccount {
 
             self.approvals = {}
             self.rejections = {}
-            self.hasRun = false
+            self.done = false
             self.details = details
         }
     }
@@ -244,9 +249,9 @@ access(all) contract ManagedAccount {
             assert(self.approvedExecutableTypes[proposal.details.executableType] == true, message: "executable type is not permitted")
 
             // The proposal resource checks whether it is runnable or not
-            proposal.run(acct: acct)
+            let done = proposal.run(acct: acct)
             
-            emit ProposalRun(managerAddress: self.acct.address, proposalId: proposalId, approvals: proposal.getApprovals(), rejections: proposal.getRejections(), title: details.title, description: details.description)
+            emit ProposalRun(managerAddress: self.acct.address, proposalId: proposalId, approvals: proposal.getApprovals(), rejections: proposal.getRejections(), title: details.title, description: details.description, done: done)
         }
 
         // Internal callback method used by the ChangeApprovedTypeExecutable resource when it is run

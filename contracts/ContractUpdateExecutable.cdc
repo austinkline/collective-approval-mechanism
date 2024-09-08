@@ -5,11 +5,13 @@ access(all) contract ContractUpdateExecutable {
     // Mutations are executed in order, and must explicitly flag whether it is an update or not.
     access(all) resource Executable: ManagedAccount.Executable {
         access(all) let mutations: [ContractMutation]
+        // What is the next mutation that should be run?
+        access(all) var nextIndex: Int
 
-        access(contract) fun run(acct: auth(Storage, Contracts, Keys, Inbox, Capabilities) &Account) {
-            for m in self.mutations {
-                m.apply(acct: acct)
-            }
+        access(contract) fun run(acct: auth(Storage, Contracts, Keys, Inbox, Capabilities) &Account): Bool {
+            self.mutations[self.nextIndex].apply(acct: acct)
+            self.nextIndex = self.nextIndex + 1
+            return self.nextIndex >= self.mutations.length
         }
 
         access(all) view fun describe(): AnyStruct {
@@ -19,6 +21,8 @@ access(all) contract ContractUpdateExecutable {
 
         init(mutations: [ContractMutation]) {
             self.mutations = mutations
+
+            self.nextIndex = 0
         }
     }
 

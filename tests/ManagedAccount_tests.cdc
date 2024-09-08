@@ -155,6 +155,7 @@ access(all) fun test_ContractUpdateExecutable_Multiple() {
     txExecutor("vote.cdc", [accounts.voter2], [accounts.manager.address, proposal.uuid, true])
 
     txExecutor("run.cdc", [accounts.voter1], [accounts.manager.address, proposal.uuid])
+    txExecutor("run.cdc", [accounts.voter1], [accounts.manager.address, proposal.uuid])
 
     // can we run the `foo` method on A?
     let script = "import A from ".concat(accounts.manager.address.toString()).concat("\n")
@@ -224,7 +225,7 @@ access(all) fun initializeWithContractUpdateManager(): ManagerAndVoters {
     txExecutor("vote.cdc", [voter1], [manager.address, proposal.uuid, true])
     txExecutor("vote.cdc", [voter2], [manager.address, proposal.uuid, true])
 
-    txExecutor("run.cdc", [voter1], [manager.address, proposal.uuid])   
+    txExecutor("run.cdc", [voter1], [manager.address, proposal.uuid])
 
     return m
 }
