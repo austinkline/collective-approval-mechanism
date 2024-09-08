@@ -7,11 +7,12 @@ access(all) contract CollectiveApprovalMechanism {
     access(all) entitlement Propose
 
     access(all) let ManagerStoragePath: StoragePath
+    access(all) let ManagerPublicPath: PublicPath
     access(all) let VoterStoragePath: StoragePath
 
     // Universal events, these are executed in the lifecycle of a Manager/Proposal/Vote regardless of the executable
     access(all) event ManagerCreated(managerAddress: Address, uuid: UInt64, voters: {Address: UFix64})
-    access(all) event ProposalAdded(uuid: UInt64, title: String, description: String, executableType: String)
+    access(all) event ProposalAdded(uuid: UInt64, proposer: Address, title: String, description: String, executableType: String)
     access(all) event VoteCast(managerAddress: Address, proposalId: UInt64, voterAddress: Address, weight: UFix64, approved: Bool)
     access(all) event ProposalRun(managerAddress: Address, proposalId: UInt64, approvals: {Address: UFix64}, rejections: {Address: UFix64}, title: String, description: String)
 
@@ -91,7 +92,8 @@ access(all) contract CollectiveApprovalMechanism {
 
     // Summary details about a proposal.
     access(all) struct ProposalDetails {
-        access(all) let createdOnBlock: Block
+        access(all) let createdOnTimestamp: UFix64
+        access(all) let createdBlockHeight: UInt64
         
         access(all) let proposedBy: Address
         access(all) let title: String
@@ -101,7 +103,9 @@ access(all) contract CollectiveApprovalMechanism {
         access(all) let executableType: Type
 
         init(proposedBy: Address, title: String, description: String, executableType: Type) {
-            self.createdOnBlock = getCurrentBlock()
+            let block = getCurrentBlock()
+            self.createdBlockHeight = block.height
+            self.createdOnTimestamp = block.timestamp
 
             self.proposedBy = proposedBy
             self.title = title
@@ -120,21 +124,6 @@ access(all) contract CollectiveApprovalMechanism {
 
         access(all) let details: ProposalDetails
         access(all) var hasRun: Bool
-
-        // Record a vote. Can only be done once. This could be changed, but is currently restricted
-        // to only once so that a voter cannot manipulate others by switching their response later.
-        // A new proposal with the same executable can be made if a new vote is needed.
-        access(contract) fun recordVote(addr: Address, weight: UFix64, approved: Bool) {
-            pre {
-                self.approvals[addr] == nil && self.rejections[addr] == nil: "vote for this address has already been recorded. address: ".concat(addr.toString())
-            }
-
-            if approved {
-                 self.approvals[addr] = weight
-            } else {
-                self.rejections[addr] = weight
-            }
-        }
 
         // sum the total current total approval weight for this proposal
         access(all) view fun getApprovalWeight(): UFix64 {
@@ -156,6 +145,21 @@ access(all) contract CollectiveApprovalMechanism {
 
         access(all) view fun getDetails(): ProposalDetails {
             return self.details
+        }
+
+        // Record a vote. Can only be done once. This could be changed, but is currently restricted
+        // to only once so that a voter cannot manipulate others by switching their response later.
+        // A new proposal with the same executable can be made if a new vote is needed.
+        access(contract) fun recordVote(addr: Address, weight: UFix64, approved: Bool) {
+            pre {
+                self.approvals[addr] == nil && self.rejections[addr] == nil: "vote for this address has already been recorded. address: ".concat(addr.toString())
+            }
+
+            if approved {
+                 self.approvals[addr] = weight
+            } else {
+                self.rejections[addr] = weight
+            }
         }
 
         // Run this proposal, can only be done if:
@@ -224,6 +228,14 @@ access(all) contract CollectiveApprovalMechanism {
         // What addresses can vote, and with what weight?
         access(self) let voters: {Address: UFix64}
 
+        access(all) view fun borrowProposal(proposalId: UInt64): &Proposal? {
+            return &self.proposals[proposalId]
+        }
+
+        access(all) view fun getApprovedExecutableTypes(): {Type: Bool} {
+            return self.approvedExecutableTypes
+        }
+
         access(all) fun run(proposalId: UInt64) {
             let acct = self.acct.borrow() ?? panic("unable to borrow account capability")
             let proposal = (&self.proposals[proposalId] as &Proposal?) ?? panic("proposal not found. id: ".concat(proposalId.toString()))
@@ -234,16 +246,16 @@ access(all) contract CollectiveApprovalMechanism {
             // The proposal resource checks whether it is runnable or not
             proposal.run(acct: acct)
             
-            emit ProposalRun(managerAddress: self.acct.address, proposalId: self.uuid, approvals: proposal.getApprovals(), rejections: proposal.getRejections(), title: details.title, description: details.description)
+            emit ProposalRun(managerAddress: self.acct.address, proposalId: proposalId, approvals: proposal.getApprovals(), rejections: proposal.getRejections(), title: details.title, description: details.description)
         }
 
         // Internal callback method used by the ChangeApprovedTypeExecutable resource when it is run
         access(contract) fun setExecutableTypeApproval(type: Type, approved: Bool) {
             if approved {
                 self.approvedExecutableTypes[type] = true
+            } else {
+                self.approvedExecutableTypes.remove(key: type)
             }
-
-            self.approvedExecutableTypes.remove(key: type)
         }
 
         // Internal callback used by the ChangeVotersExecutable resource when it is run
@@ -282,7 +294,7 @@ access(all) contract CollectiveApprovalMechanism {
 
             destroy self.proposals.insert(key: proposal.uuid, <-proposal)
 
-            emit ProposalAdded(uuid: uuid, title: title, description: description, executableType: details.executableType.identifier)
+            emit ProposalAdded(uuid: uuid, proposer: proposer.owner!.address, title: title, description: description, executableType: details.executableType.identifier)
             return uuid
         }
 
@@ -305,8 +317,26 @@ access(all) contract CollectiveApprovalMechanism {
         }
     }
 
+    access(all) fun createManager(acct: Capability<auth(Storage, Contracts, Keys, Inbox, Capabilities) &Account>, voters: {Address: UFix64}): @Manager {
+        return <- create Manager(acct: acct, voters: voters)
+    }
+
+    access(all) fun createVoter(): @Voter {
+        return <- create Voter()
+    }
+
+    access(all) fun createChangeApprovedTypeExecutable(executableType: Type, approved: Bool): @ChangeApprovedTypeExecutable {
+        return <- create ChangeApprovedTypeExecutable(executableType: executableType, approved: approved)
+    }
+
+    access(all) fun createChangeVotersExecutable(voters: {Address: UFix64}): @ChangeVotersExecutable {
+        return <- create ChangeVotersExecutable(voters: voters)
+    }
+
     init() {
         self.ManagerStoragePath = /storage/cam_manager
+        self.ManagerPublicPath = /public/cam_manager
+
         self.VoterStoragePath = /storage/cam_voter
     }
 }

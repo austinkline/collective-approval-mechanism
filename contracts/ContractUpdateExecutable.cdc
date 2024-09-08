@@ -41,4 +41,8 @@ access(all) contract ContractUpdateExecutable {
             self.isUpdate = isUpdate
         }
     }
+
+    access(all) fun createContractUpdateExecutable(mutations: [ContractMutation]): @Executable {
+        return <- create Executable(mutations: mutations)
+    }
 }

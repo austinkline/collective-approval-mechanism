@@ -42,7 +42,7 @@ access(all) fun loadCode(_ fileName: String, _ baseDirectory: String): String {
     return Test.readFile("../".concat(baseDirectory).concat("/").concat(fileName))
 }
 
-access(all) fun txExecutor(_ txName: String, _ signers: [Test.TestAccount], _ arguments: [AnyStruct], _ expectedError: String?): Test.TransactionResult {
+access(all) fun txExecutor(_ txName: String, _ signers: [Test.TestAccount], _ arguments: [AnyStruct]): Test.TransactionResult {
     let txCode = loadCode(txName, "transactions")
 
     let authorizers: [Address] = []
