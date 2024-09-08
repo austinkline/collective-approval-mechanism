@@ -1,0 +1,37 @@
+{
+	"networks": {
+		"emulator": "127.0.0.1:3569",
+		"mainnet": "access.mainnet.nodes.onflow.org:9000",
+		"previewnet": "access.previewnet.nodes.onflow.org:9000",
+		"testing": "127.0.0.1:3569",
+		"testnet": "access.devnet.nodes.onflow.org:9000"
+	},
+	"accounts": {
+		"emulator-account": {
+			"address": "f8d6e0586b0a20c7",
+			"key": "cb07765226843969253d0d0414f49bd0e7852093e012665c65dccca4fdae3569"
+		}
+	},
+	"contracts": {
+		"CollectiveApprovalMechanism": {
+			"source": "./contracts/CollectiveApprovalMechanism.cdc",
+			"aliases": {
+				"testing": "0x0000000000000007"
+			}
+		},
+		"ContractUpdateExecutable": {
+			"source": "./contracts/ContractUpdateExecutable.cdc",
+			"aliases": {
+				"testing": "0x0000000000000007"
+			}
+		}
+	},
+	"deployments": {
+		"emulator": {
+			"emulator-account": [
+				"CollectiveApprovalMechanism",
+				"ContractUpdateExecutable"
+			]
+		}
+	}
+}
